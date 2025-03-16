@@ -486,22 +486,18 @@ class EdgeCondition:
 
     def __init__(
         self,
-        parse_func: Callable[[Player, str, "DialogicNetworkGameMaster"], bool],
-        extract_func: Callable[
-            [Player, str, "DialogicNetworkGameMaster"], Optional[str]
-        ] = None,
+        parse_func: Callable[[Player, str, "DialogicNetworkGameMaster"], Tuple[bool, Optional[str]]],
         description: str = "",
     ):
         """
         Args:
             parse_func: Function that takes (player, utterance, game_master) and returns
-                       a boolean indicating if the condition is satisfied (token exists).
-            extract_func: Optional function that takes (player, utterance, game_master) and returns
-                         the extracted content to be passed to the next node.
+                       a tuple containing (is_match, parsed_content). The is_match indicates
+                       if parsing was successful, and parsed_content contains the extracted text
+                       (or None if parsing failed).
             description: Human-readable description of the condition for visualization.
         """
         self.parse_func = parse_func
-        self.extract_func = extract_func
         self.description = description
 
     def parse(
@@ -509,34 +505,18 @@ class EdgeCondition:
         player: Player,
         utterance: str,
         game_master: "DialogicNetworkGameMaster",
-    ) -> bool:
-        """Check if the condition is satisfied by parsing for specific tokens.
+    ) -> Tuple[bool, Optional[str]]:
+        """Parse the utterance and determine if the condition is satisfied.
         Args:
             player: The Player instance that produced the response.
             utterance: The text content of the response.
             game_master: The DialogicNetworkGameMaster instance.
         Returns:
-            A bool indicating if the token/condition is found.
+            A tuple containing (is_match, parsed_content). The is_match indicates
+            if parsing was successful, and parsed_content contains the extracted text
+            (or None if parsing failed).
         """
         return self.parse_func(player, utterance, game_master)
-
-    def extract_content(
-        self,
-        player: Player,
-        utterance: str,
-        game_master: "DialogicNetworkGameMaster",
-    ) -> Optional[str]:
-        """Extract relevant content when a condition is met.
-        Args:
-            player: The Player instance that produced the response.
-            utterance: The text content of the response.
-            game_master: The DialogicNetworkGameMaster instance.
-        Returns:
-            Extracted content string or None if no extraction function is provided.
-        """
-        if self.extract_func is None:
-            return None
-        return self.extract_func(player, utterance, game_master)
 
 
 @dataclass
