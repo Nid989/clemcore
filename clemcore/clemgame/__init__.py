@@ -1,6 +1,6 @@
 from clemcore.clemgame.instances import GameInstanceGenerator
 from clemcore.clemgame.resources import GameResourceLocator
-from clemcore.clemgame.master import GameMaster, DialogueGameMaster, Player
+from clemcore.clemgame.master import GameMaster, DialogueGameMaster, DialogicNetworkGameMaster, Player
 from clemcore.clemgame.metrics import GameScorer
 from clemcore.clemgame.recorder import GameRecorder
 from clemcore.clemgame.registry import GameSpec, GameRegistry
@@ -11,6 +11,7 @@ __all__ = [
     "Player",
     "GameMaster",
     "DialogueGameMaster",
+    "DialogicNetworkGameMaster",
     "GameScorer",
     "GameSpec",
     "GameRegistry",
