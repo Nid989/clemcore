@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 from clemcore import backends
-from clemcore.clemgame.master import Player, GameMaster
 from clemcore.clemgame.recorder import GameRecorder
 
 module_logger = logging.getLogger(__name__)
