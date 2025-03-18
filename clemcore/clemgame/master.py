@@ -485,7 +485,9 @@ class EdgeCondition:
 
     def __init__(
         self,
-        parse_func: Callable[[Player, str, "DialogicNetworkGameMaster"], Tuple[bool, Optional[str]]],
+        parse_func: Callable[
+            [Player, str, "DialogicNetworkGameMaster"], Tuple[bool, Optional[str]]
+        ],
         description: str = "",
     ):
         """
@@ -648,9 +650,7 @@ class DialogicNetworkGameMaster(GameMaster):
         if to_node not in self.graph:
             raise ValueError(f"Node '{to_node}' does not exist in the graph")
 
-        edge_count = sum(
-            1 for u, v, k in self.graph.edges(from_node, to_node, keys=True)
-        )
+        edge_count = sum(1 for edge in self.graph.edges(from_node, to_node, keys=True))
         edge_key = f"decision_{from_node}_{to_node}_{edge_count}"
 
         self.graph.add_edge(
@@ -992,40 +992,77 @@ class DialogicNetworkGameMaster(GameMaster):
         """
         pass
 
-    def visualize_graph(self, figsize=(12, 8), save_path=None):
-        """Visualize the Network structure.
+    def visualize_graph(self, figsize=(12, 10), save_path=None, dpi=100):
+        """Visualize the Network structure with professional styling.
         Args:
             figsize: Size of the figure (width, height) in inches.
             save_path: Optional path to save the visualization. If None, the visualization is displayed.
+            dpi: Resolution for the output figure.
         """
-        plt.figure(figsize=figsize)
+        plt.figure(figsize=figsize, dpi=dpi)
 
-        node_colors = []
-        for node in self.graph.nodes():
-            node_type = self.graph.nodes[node]["type"]
-            if node_type == NodeType.START:
-                node_colors.append("green")
-            elif node_type == NodeType.END:
-                node_colors.append("red")
-            else:
-                node_colors.append("skyblue")
+        # Better node positioning - hierarchical layout works well for directed graphs
+        if not self.node_positions:
+            try:
+                # Try to use a hierarchical layout for better flow visualization
+                self.node_positions = nx.nx_pydot.pydot_layout(self.graph, prog="dot")
+            except:
+                # Fall back to spring layout with better parameters
+                self.node_positions = nx.spring_layout(
+                    self.graph,
+                    k=0.5,  # Optimal distance between nodes
+                    iterations=100,  # More iterations for better layout
+                    seed=42,  # Consistent layout between runs
+                )
 
+        # Professional color scheme
+        node_colors = {
+            NodeType.START: "#2ECC71",  # Emerald green
+            NodeType.PLAYER: "#3498DB",  # Blue
+            NodeType.END: "#E74C3C",  # Red
+        }
+
+        # Draw nodes by type for better styling
+        for node_type in NodeType:
+            nodes = [
+                node
+                for node in self.graph.nodes()
+                if self.graph.nodes[node].get("type") == node_type
+            ]
+            if not nodes:
+                continue
+
+            nx.draw_networkx_nodes(
+                self.graph,
+                self.node_positions,
+                nodelist=nodes,
+                node_color=node_colors[node_type],
+                node_size=3000,
+                alpha=0.9,
+                edgecolors="#2C3E50",  # Dark border
+                linewidths=2,
+            )
+
+        # Create better node labels with appropriate text wrapping
         node_labels = {}
         for node in self.graph.nodes():
-            node_type = self.graph.nodes[node]["type"]
+            node_type = self.graph.nodes[node].get("type")
             if node_type == NodeType.PLAYER:
-                player = self.graph.nodes[node]["player"]
-                node_labels[node] = f"{node}\n({player.model.get_name()})"
+                player = self.graph.nodes[node].get("player")
+
+                # Handle either model name or role
+                if hasattr(player, "role") and player.role:
+                    role_text = player.role
+                else:
+                    # Use string representation if no role available
+                    role_text = str(player.model)
+
+                # Limit label length to avoid overflow
+                node_labels[node] = f"{node}\n({role_text})"
             else:
                 node_labels[node] = node
 
-        if not self.node_positions:
-            self.node_positions = nx.spring_layout(self.graph)
-
-        nx.draw_networkx_nodes(
-            self.graph, self.node_positions, node_color=node_colors, node_size=2000
-        )
-
+        # Draw edge types with distinctive styling
         standard_edges = [
             (u, v)
             for u, v, d in self.graph.edges(data=True)
@@ -1037,41 +1074,166 @@ class DialogicNetworkGameMaster(GameMaster):
             if d.get("type") == EdgeType.DECISION
         ]
 
+        # Standard edges with solid lines
         nx.draw_networkx_edges(
             self.graph,
             self.node_positions,
             edgelist=standard_edges,
-            arrowsize=20,
-            width=2,
-            edge_color="black",
+            arrowsize=25,
+            width=2.5,
+            edge_color="#34495E",  # Dark gray
+            connectionstyle="arc3,rad=0.1",  # Curved edges for better visibility
         )
+
+        # Decision edges with dashed lines
         nx.draw_networkx_edges(
             self.graph,
             self.node_positions,
             edgelist=decision_edges,
-            arrowsize=20,
+            arrowsize=25,
             width=2,
-            edge_color="blue",
+            edge_color="#8E44AD",  # Purple
             style="dashed",
+            connectionstyle="arc3,rad=0.1",  # Curved edges
         )
 
+        # Draw node labels with better font
         nx.draw_networkx_labels(
-            self.graph, self.node_positions, labels=node_labels, font_size=10
+            self.graph,
+            self.node_positions,
+            labels=node_labels,
+            font_size=10,
+            font_family="sans-serif",
+            font_weight="bold",
+            font_color="#FFFFFF",  # White text for better contrast
         )
 
+        # Prepare edge labels with better formatting
         edge_labels_dict = {}
         for (u, v, k), label in self.edge_labels.items():
+            # Limit edge label length and add line breaks
+            if label and len(label) > 20:
+                words = label.split()
+                chunks = []
+                current_chunk = []
+                current_length = 0
+
+                for word in words:
+                    if current_length + len(word) > 20:
+                        chunks.append(" ".join(current_chunk))
+                        current_chunk = [word]
+                        current_length = len(word)
+                    else:
+                        current_chunk.append(word)
+                        current_length += len(word) + 1
+
+                if current_chunk:
+                    chunks.append(" ".join(current_chunk))
+
+                label = "\n".join(chunks)
+
             edge_labels_dict[(u, v)] = label
 
+        # Draw edge labels with better positioning
         nx.draw_networkx_edge_labels(
-            self.graph, self.node_positions, edge_labels=edge_labels_dict, font_size=8
+            self.graph,
+            self.node_positions,
+            edge_labels=edge_labels_dict,
+            font_size=8,
+            font_family="sans-serif",
+            bbox=dict(
+                facecolor="white", edgecolor="none", alpha=0.7, boxstyle="round,pad=0.3"
+            ),
+            label_pos=0.4,  # Adjust label position along the edge
         )
 
-        plt.title(f"Network for {self.game_name}")
+        # Mark the anchor node with a special border if it exists
+        if self.anchor_node and self.anchor_node in self.graph:
+            anchor_pos = {self.anchor_node: self.node_positions[self.anchor_node]}
+            nx.draw_networkx_nodes(
+                self.graph,
+                anchor_pos,
+                nodelist=[self.anchor_node],
+                node_color="none",  # Transparent fill
+                node_size=3300,  # Slightly larger
+                alpha=1.0,
+                edgecolors="#FFD700",  # Gold border
+                linewidths=4,
+            )
+
+        plt.title(
+            f"Interaction Network for {self.game_name}",
+            fontsize=16,
+            fontweight="bold",
+            pad=20,
+        )
         plt.axis("off")
+        plt.tight_layout()
+
+        # Add legend
+        legend_elements = [
+            plt.Line2D(
+                [0],
+                [0],
+                color=node_colors[NodeType.START],
+                marker="o",
+                linestyle="None",
+                markersize=15,
+                label="Start Node",
+            ),
+            plt.Line2D(
+                [0],
+                [0],
+                color=node_colors[NodeType.PLAYER],
+                marker="o",
+                linestyle="None",
+                markersize=15,
+                label="Player Node",
+            ),
+            plt.Line2D(
+                [0],
+                [0],
+                color=node_colors[NodeType.END],
+                marker="o",
+                linestyle="None",
+                markersize=15,
+                label="End Node",
+            ),
+            plt.Line2D([0], [0], color="#34495E", linewidth=2.5, label="Standard Edge"),
+            plt.Line2D(
+                [0],
+                [0],
+                color="#8E44AD",
+                linewidth=2,
+                linestyle="dashed",
+                label="Decision Edge",
+            ),
+        ]
+        if self.anchor_node:
+            legend_elements.append(
+                plt.Line2D(
+                    [0],
+                    [0],
+                    markerfacecolor="none",
+                    markeredgecolor="#FFD700",
+                    marker="o",
+                    linestyle="None",
+                    markersize=15,
+                    markeredgewidth=2,
+                    label="Anchor Node",
+                )
+            )
+
+        plt.legend(
+            handles=legend_elements,
+            loc="lower center",
+            bbox_to_anchor=(0.5, -0.15),
+            ncol=3,
+            fontsize=10,
+        )
 
         if save_path:
-            plt.savefig(save_path)
+            plt.savefig(save_path, bbox_inches="tight", dpi=dpi)
         else:
             plt.show()
 
