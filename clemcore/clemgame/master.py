@@ -490,13 +490,12 @@ class EdgeCondition:
         ],
         description: str = "",
     ):
-        """
-        Args:
-            parse_func: Function that takes (player, utterance, game_master) and returns
-                       a tuple containing (is_match, parsed_content). The is_match indicates
-                       if parsing was successful, and parsed_content contains the extracted text
-                       (or None if parsing failed).
-            description: Human-readable description of the condition for visualization.
+        """Args:
+        parse_func: Function that takes (player, utterance, game_master) and returns
+                   a tuple containing (is_match, parsed_content). The is_match indicates
+                   if parsing was successful, and parsed_content contains the extracted text
+                   (or None if parsing failed).
+        description: Human-readable description of the condition for visualization.
         """
         self.parse_func = parse_func
         self.description = description
@@ -532,13 +531,11 @@ class DialogicNetworkGameMaster(GameMaster):
     """Extended GameMaster, implements a graph-based approach for player interaction flow.
     Players are represented as nodes in a directed graph, with edges representing possible
     transitions between players.
-
     The graph supports two types of edges:
         - Standard edges: Direct connections that are always traversed if no decision edges are taken
         - Decision edges: Conditional connections that are traversed only if their condition evaluates to True
     This allows for complex interaction patterns including branching paths, self-loops, and
     conditional transitions based on player responses.
-
     Turn Definition:
         A turn is defined as the sequence of state transitions that:
             - Begins when the system enters the anchor node
@@ -554,12 +551,11 @@ class DialogicNetworkGameMaster(GameMaster):
         experiment: dict,
         player_models: List[backends.Model],
     ):
-        """
-        Args:
-            name: The name of the game (as specified in game_registry).
-            path: Path to the game (as specified in game_registry).
-            experiment: The experiment (set of instances) to use.
-            player_models: Player models to use for one or more players.
+        """Args:
+        name: The name of the game (as specified in game_registry).
+        path: Path to the game (as specified in game_registry).
+        experiment: The experiment (set of instances) to use.
+        player_models: Player models to use for one or more players.
         """
         super().__init__(name, path, experiment, player_models)
 
@@ -629,7 +625,6 @@ class DialogicNetworkGameMaster(GameMaster):
             condition=None,
             key=f"standard_{from_node}_{to_node}",
         )
-
         if label:
             edge_key = (from_node, to_node, f"standard_{from_node}_{to_node}")
             self.edge_labels[edge_key] = label
@@ -652,7 +647,6 @@ class DialogicNetworkGameMaster(GameMaster):
 
         edge_count = sum(1 for edge in self.graph.edges(from_node, to_node, keys=True))
         edge_key = f"decision_{from_node}_{to_node}_{edge_count}"
-
         self.graph.add_edge(
             from_node,
             to_node,
@@ -660,7 +654,6 @@ class DialogicNetworkGameMaster(GameMaster):
             condition=condition,
             key=edge_key,
         )
-
         if label:
             self.edge_labels[(from_node, to_node, edge_key)] = label
         elif condition and condition.description:
@@ -695,7 +688,7 @@ class DialogicNetworkGameMaster(GameMaster):
         )
         for name, player in self.players_by_names.items():
             players_descriptions[name] = player.get_description()
-        # log player ID and description dcit:
+        # log player ID and description dict:
         self.log_players(players_descriptions)
 
     def play(self) -> None:
@@ -706,7 +699,6 @@ class DialogicNetworkGameMaster(GameMaster):
         _on_after_game methods.
         """
         self._on_before_game()
-
         self.current_node = "START"
 
         while self.current_node != "END" and self._does_game_proceed():
@@ -718,41 +710,32 @@ class DialogicNetworkGameMaster(GameMaster):
                     f"{self.game_name}: %s turn: %d", self.game_name, self.current_turn
                 )
                 self._reset_turn_tracking()
-
             next_node = self.transition.next_node
-            self.transition = NodeTransition()  # Reset transition
-
+            self.transition = NodeTransition()
             if next_node is None:
                 module_logger.warning(
                     f"No valid transitions from node '{self.current_node}'"
                 )
                 break
-
             prev_node = self.current_node
             self.current_node = next_node
             self._update_turn_tracking(prev_node, next_node)
-
             if self.current_node == "END":
                 break
-
             node_data = self.graph.nodes[self.current_node]
             if node_data["type"] == NodeType.PLAYER:
                 player = node_data["player"]
-
                 self.prompt(player)
                 while self._should_reprompt(player):
                     self._on_before_reprompt(player)
                     self.prompt(player, is_reprompt=True)
-
                 self.last_player = player
                 self.last_utterance = self.messages_by_names[player.descriptor][-1][
                     "content"
                 ]
-
             if self._is_turn_complete():
                 self._on_after_turn(self.current_turn)
                 self.current_turn += 1
-
         self._on_after_game()
 
     def prompt(self, player: Player, is_reprompt=False):
@@ -914,11 +897,9 @@ class DialogicNetworkGameMaster(GameMaster):
             The response content, potentially modified.
         """
         self.transition = NodeTransition()
-
         _utterance, log_action, next_node, extracted_content = (
             self._parse_response_for_decision_routing(player, utterance)
         )
-
         # If no decision edge was taken, fall back to standard edges
         if next_node is None:
             for _, to_node, edge_data in self.graph.out_edges(
@@ -927,17 +908,14 @@ class DialogicNetworkGameMaster(GameMaster):
                 if edge_data.get("type") == EdgeType.STANDARD:
                     next_node = to_node
                     break
-
         # Store transition data in temporary registry
         if next_node:
             self.transition.next_node = next_node
         if extracted_content:
             self.transition.extracted_content = extracted_content
-
         if _utterance != utterance and log_action:
             action = {"type": "parse", "content": _utterance}
             self.log_event(from_="GM", to="GM", action=action)
-
         return _utterance
 
     def _parse_response_for_decision_routing(
@@ -945,12 +923,10 @@ class DialogicNetworkGameMaster(GameMaster):
     ) -> Tuple[str, bool, Optional[str], Optional[str]]:
         """Parse player response and evaluate decision edge conditions.
         Hook: Modify this method for game-specific functionality.
-
         This method should:
         1. Parse the player's utterance for relevant content
         2. Evaluate decision edge conditions based on the parsed content
         3. Determine which decision edge (if any) should be taken
-
         Args:
             player: The Player instance that produced the response.
             utterance: The text content of the response.
@@ -1006,7 +982,7 @@ class DialogicNetworkGameMaster(GameMaster):
             try:
                 # Try to use a hierarchical layout for better flow visualization
                 self.node_positions = nx.nx_pydot.pydot_layout(self.graph, prog="dot")
-            except:
+            except Exception:
                 # Fall back to spring layout with better parameters
                 self.node_positions = nx.spring_layout(
                     self.graph,
@@ -1253,12 +1229,9 @@ class DialogicNetworkGameMaster(GameMaster):
         """
         if self.anchor_node is None:
             return
-
         self.current_turn_nodes.append(next_node)
-
         if next_node != self.anchor_node:
             self.non_anchor_visited = True
-
         if next_node == self.anchor_node and self.non_anchor_visited:
             self.turn_complete = True
             module_logger.debug(f"Turn complete: {self.current_turn_nodes}")
@@ -1281,7 +1254,6 @@ class DialogicNetworkGameMaster(GameMaster):
         self.current_turn_nodes = []
         self.non_anchor_visited = False
         self.turn_complete = False
-
         if self.current_node:
             self.current_turn_nodes.append(self.current_node)
 
