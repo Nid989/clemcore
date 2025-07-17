@@ -71,6 +71,7 @@ class AnthropicModel(backends.Model):
         Returns:
             A tuple of the message history list with encoded images and the system message as string.
         """
+        messages = self.preprocess_messages(messages)
         encoded_messages = []
         system_message = ''
 

@@ -326,6 +326,62 @@ class Model(abc.ABC):
             return False
         return self.get_name() == other.get_name()
 
+    def preprocess_messages(self, messages: List[Dict]) -> List[Dict]:
+        """Process messages before encoding, merging additional content fields.
+        
+        Args:
+            messages: List of message dictionaries
+            
+        Returns:
+            List of processed messages with additional fields merged into content
+        """
+        processed = []
+        for message in messages:
+            if self._has_additional_content_fields(message):
+                processed.append(self._merge_additional_fields_to_content(message))
+            else:
+                processed.append(message)
+        return processed
+
+    def _has_additional_content_fields(self, message: Dict) -> bool:
+        """Check if message has fields beyond role/content/image.
+        
+        Args:
+            message: Message dictionary to check
+            
+        Returns:
+            bool: True if message has additional content fields
+        """
+        standard_keys = {"role", "content", "image"}
+        return bool(set(message.keys()) - standard_keys)
+
+    def _merge_additional_fields_to_content(self, message: Dict) -> Dict:
+        """Merge additional content fields into main content field.
+        
+        Args:
+            message: Original message dictionary
+            
+        Returns:
+            Dict: New message with additional fields merged into content
+        """
+        processed_message = {
+            "role": message["role"], 
+            "content": message["content"]
+        }
+        
+        # Preserve original image key
+        if "image" in message:
+            processed_message["image"] = message["image"]
+        
+        # Get all additional fields in sorted order for deterministic merging
+        additional_fields = sorted([k for k in message.keys() if k not in {"role", "content", "image"}])
+        
+        # Append additional content fields to main content
+        for field in additional_fields:
+            processed_message["content"] += str(message[field])
+        
+        return processed_message
+
     @abc.abstractmethod
     def generate_response(self, messages: List[Dict]) -> Tuple[Any, Any, str]:
         """Put prompt in model-specific format and get its response.

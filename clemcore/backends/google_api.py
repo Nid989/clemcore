@@ -117,6 +117,7 @@ class GoogleModel(backends.Model):
         Returns:
             A tuple of the message history list with encoded images and the message history list for logging.
         """
+        messages = self.preprocess_messages(messages)
         encoded_messages = []
         encoded_messages_for_logging = []
 

@@ -73,6 +73,7 @@ class OpenAIModel(backends.Model):
         Returns:
             The message history list with encoded images.
         """
+        messages = self.preprocess_messages(messages)
         encoded_messages = []
 
         for message in messages:

@@ -38,6 +38,20 @@ body {background-color: rgb(157, 152, 150);}
     padding: 7px 15px;
     margin-bottom: 30px;
   }
+
+  /* Image styling within messages */
+  .msg img {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Specific styling for GM-to-GM image messages */
+  .msg.gm-gm img {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
   
   /* 5 levels, two players to/from game master and meta messages form game master */
 
@@ -77,7 +91,15 @@ body {background-color: rgb(157, 152, 150);}
     margin-left: 40%;
     margin-right: 40%;
     font-size: 0.8rem;
-
+  }
+  
+  /* Override for GM-to-GM messages containing an image to allow for more width */
+  .msg.gm-gm.image-message {
+    margin-left: 20%;
+    margin-right: 20%;
+    max-width: 60%; /* Take up to 60% of the container width */
+    background: transparent;
+    padding: 0;
   }
   
   /* speaker labels */

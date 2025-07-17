@@ -178,6 +178,7 @@ class VLLMLocalModel(backends.Model):
         :param log_messages: If True, raw and cleaned messages passed will be logged.
         :return: the continuation
         """
+        messages = self.preprocess_messages(messages)
         # log current given messages list:
         if log_messages:
             logger.info(f"Raw messages passed: {messages}")

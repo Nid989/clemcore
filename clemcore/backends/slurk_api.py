@@ -188,5 +188,6 @@ class SlurkModel(backends.Model):  # todo: make this HumanModel when HumanModel 
         :param model: chat-gpt for chat-completion, otherwise text completion
         :return: the continuation
         """
+        messages = self.preprocess_messages(messages)
         response_text = self.wait_for_user_response(messages)
         return messages, {"response": "slurk"}, response_text

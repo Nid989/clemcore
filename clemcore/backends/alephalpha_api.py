@@ -55,6 +55,7 @@ class AlephAlphaModel(backends.Model):
         Returns:
             The generated response message returned by the AlephAlpha remote API.
         """
+        messages = self.preprocess_messages(messages)
         prompt_text = ''
 
         if 'control' in self.model_spec.model_id:

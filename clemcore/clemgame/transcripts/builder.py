@@ -113,8 +113,10 @@ def build_transcript(interactions: Dict):
             # in case the content is a json with an image entry
             if isinstance(msg_content, dict):
                 if "image" in msg_content:
-                    transcript += f'<div speaker="{speaker_attr}" class="msg {class_name}" style="{style}">\n'
-                    transcript += f'  <p>{msg_raw}</p>\n'
+                    final_class_name = f"{class_name} image-message"
+                    transcript += f'<div speaker="{speaker_attr}" class="msg {final_class_name}" style="{style}">\n'
+                    # Remove the line that shows the raw dictionary content
+                    # transcript += f'  <p>{msg_raw}</p>\n'
                     for image_src in msg_content["image"]:
                         if not image_src.startswith("http"):  # take the web url as it is
                             if "IMAGE_ROOT" in os.environ:
@@ -123,7 +125,7 @@ def build_transcript(interactions: Dict):
                                 # CAUTION: this only works when the project is checked out (dev mode)
                                 image_src = os.path.join(file_utils.project_root(), image_src)
                         transcript += (f'  <a title="{image_src}">'
-                                       f'<img style="width:100%" src="{image_src}" alt="{image_src}" />'
+                                       f'<img style="width:100%; max-width:1200px; height:auto;" src="{image_src}" alt="{image_src}" />'
                                        f'</a>\n')
                     transcript += '</div>\n'
                 else:

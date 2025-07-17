@@ -1,10 +1,11 @@
 import abc
 from copy import deepcopy
 from datetime import datetime
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
 from clemcore import backends
 from clemcore.clemgame.recorder import GameRecorder, NoopGameRecorder
+from clemcore.clemgame.memory import SlidingWindowMemory
 
 
 class Player(abc.ABC):
@@ -19,7 +20,7 @@ class Player(abc.ABC):
 
     def __init__(self, model: backends.Model, name: str = None, game_role: str = None,
                  game_recorder: GameRecorder = None, initial_prompt: Union[str, Dict] = None,
-                 forget_extras: List[str] = None):
+                 forget_extras: List[str] = None, sliding_window_size: Optional[int] = None):
         """
         Args:
             model: The model used by this player.
@@ -36,6 +37,9 @@ class Player(abc.ABC):
             forget_extras: A list of context entries (keys) to forget after response generation.
                            This is useful to not keep image extras in the player's message history,
                            but still to prompt the model with an image given in the context.
+            sliding_window_size: Optional sliding window size for memory management. If specified, only the most recent
+                                sliding_window_size message pairs (user+assistant) will be kept in memory, while the
+                                initial_prompt is always preserved. If None, traditional unlimited memory is used.
         """
         self._model: backends.Model = model
         self._name: str = name  # set by master
@@ -44,10 +48,16 @@ class Player(abc.ABC):
         self._is_initial_call: bool = True
         self._initial_prompt: Dict = None if initial_prompt is None else self.__validate_initial_prompt(initial_prompt)
         self._forget_extras: List[str] = forget_extras or []  # set by game developer
-        self._messages: List[Dict] = []  # internal state
+        self._messages: List[Dict] = []  # internal state (used when sliding window disabled)
         self._prompt = None  # internal state
         self._response_object = None  # internal state
         self._last_context = None  # internal state
+        
+        # Initialize sliding window memory if specified
+        self._sliding_window_size = sliding_window_size
+        self._sliding_memory: Optional[SlidingWindowMemory] = None
+        if sliding_window_size is not None:
+            self._sliding_memory = SlidingWindowMemory(window_size=sliding_window_size, preserve_initial_prompt=True)
 
     def __deepcopy__(self, memo):
         """Deepcopy override method.
@@ -110,7 +120,12 @@ class Player(abc.ABC):
 
     @property
     def messages(self):
-        return deepcopy(self._messages)
+        if self._sliding_memory is not None:
+            # Return messages from sliding window memory
+            return deepcopy(self._sliding_memory.get_all_messages())
+        else:
+            # Traditional approach: return all messages
+            return deepcopy(self._messages)
 
     @property
     def last_context(self):
@@ -158,10 +173,18 @@ class Player(abc.ABC):
         memorized_initial_prompt = None
         # handle initial/first call, with only the initial prompt user message in history:
         if self._is_initial_call and self._initial_prompt is not None:
-            assert len(self._messages) == 0, ("There must be no entry in the player's message history "
-                                              "on the first call, when the initial prompt is set.")
-            memorized_initial_prompt = deepcopy(self._initial_prompt)  # see explanation below
-            self._messages.append(memorized_initial_prompt)  # merged with context in ensure_alternating_roles (backend)
+            memorized_initial_prompt = deepcopy(self._initial_prompt)
+            
+            if self._sliding_memory is not None:
+                print("Setting initial prompt in sliding window memory")
+                # For sliding window memory, set the initial prompt in the memory manager
+                self._sliding_memory.set_initial_prompt(memorized_initial_prompt)
+            else:
+                # Traditional approach: append to messages list
+                assert len(self._messages) == 0, ("There must be no entry in the player's message history "
+                                                  "on the first call, when the initial prompt is set.")
+                self._messages.append(memorized_initial_prompt)  # merged with context in ensure_alternating_roles (backend)
+            
             self.__log_send_context_event(memorized_initial_prompt["content"], label="initial prompt")
 
         self._last_context = deepcopy(context)
@@ -182,8 +205,15 @@ class Player(abc.ABC):
                 del memorized_initial_prompt[extra]
 
         if memorize:
-            self._messages.append(memorized_context)
-            self._messages.append(dict(role="assistant", content=response_text))
+            if self._sliding_memory is not None:
+                print("Adding message pair to sliding window memory")
+                # Use sliding window memory
+                response_message = dict(role="assistant", content=response_text)
+                self._sliding_memory.add_message_pair(memorized_context, response_message)
+            else:
+                # Traditional approach: append to messages list
+                self._messages.append(memorized_context)
+                self._messages.append(dict(role="assistant", content=response_text))
 
         self._is_initial_call = False
         return response_text
@@ -197,7 +227,13 @@ class Player(abc.ABC):
         elif isinstance(self.model, backends.HumanModel):
             response_text = self._terminal_response(context)
         else:
-            prompt, response_object, response_text = self.model.generate_response(self._messages + [context])
+            # Use sliding window memory if enabled, otherwise use traditional approach
+            if self._sliding_memory is not None:
+                print("Getting prompt messages from sliding window memory")
+                prompt_messages = self._sliding_memory.get_prompt_messages(current_context=context)
+            else:
+                prompt_messages = self._messages + [context]
+            prompt, response_object, response_text = self.model.generate_response(prompt_messages)
             # TODO: add default ContextExceededError handling here or above
         call_duration = datetime.now() - call_start
         self._game_recorder.count_request()

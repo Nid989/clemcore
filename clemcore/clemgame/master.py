@@ -285,6 +285,7 @@ class DialogueGameMaster(GameMaster):
         while not done:
             context = self.get_context_for(self.current_player)
             response = self.current_player(context)
+            print(f"Response: {response}")
             done, _ = self.process_turn(response)
 
     @final

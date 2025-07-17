@@ -54,6 +54,7 @@ class CohereModel(backends.Model):
         Returns:
             The generated response message returned by the Cohere remote API.
         """
+        messages = self.preprocess_messages(messages)
         chat_history = []
 
         # all other messages except the last one. It is passed to the API with the variable message.

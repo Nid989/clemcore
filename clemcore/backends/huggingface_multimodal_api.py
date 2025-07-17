@@ -208,6 +208,7 @@ class HuggingfaceMultimodalModel(backends.Model):
             backends.ContextExceededError: If the context token limit is exceeded.
             ValueError: If neither custom chat template or custom prompt method is provided
         """
+        messages = self.preprocess_messages(messages)
         # Check to see if game passes multiple images in a single turn
         # Proceed only if model supports multiple images, else return blanks for prompt, response and response_text
         has_multiple_images = check_multiple_image(messages=messages)
