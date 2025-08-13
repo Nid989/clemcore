@@ -86,20 +86,51 @@ body {background-color: rgb(157, 152, 150);}
   }
 
   .msg.gm-gm {
-    background: #f1f1f1;
+    background: #ededed; /* Distinct light gray shade */
     color: #373636;
-    margin-left: 40%;
-    margin-right: 40%;
+    margin-left: 32px; /* Symmetric padding from left edge */
+    margin-right: 50%; /* End at center */
+    width: 45%; /* Consistent width for all left messages */
     font-size: 0.8rem;
+    border-radius: 0; /* Square corners */
   }
   
+  /* Multi-player message styles - GM messages end at center, player messages start at center */
+  .msg.gm-player {
+    border-radius: var(--rad) var(--rad-sm) var(--rad-sm) var(--rad); /* Rounded on left side */
+    background: #c4c3c3;
+    color: #0c0c0c;
+    margin-left: 32px; /* Symmetric padding from left edge */
+    margin-right: 50%; /* End at center */
+    width: 45%; /* Consistent width for all left messages */
+  }
+
+  .msg.player-gm {
+    border-radius: var(--rad-sm) var(--rad) var(--rad) var(--rad-sm); /* Rounded on right side */
+    background: #874aaf;
+    color: #fff;
+    margin-left: 50%; /* Start at center */
+    margin-right: 32px; /* Symmetric padding from right edge */
+    width: 45%; /* Consistent width for all right messages */
+  }
+
   /* Override for GM-to-GM messages containing an image to allow for more width */
   .msg.gm-gm.image-message {
-    margin-left: 20%;
-    margin-right: 20%;
-    max-width: 60%; /* Take up to 60% of the container width */
+    margin-left: 32px; /* Consistent padding from left edge */
+    margin-right: 50%; /* End at center like regular GM-GM messages */
+    width: 45%; /* Same width as regular GM-GM messages */
     background: transparent;
     padding: 0;
+    border-radius: 0; /* Square corners like regular GM-GM messages */
+  }
+  
+  /* Specific styling for images within GM-GM messages */
+  .msg.gm-gm.image-message img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0; /* Square corners for images too */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   
   /* speaker labels */
@@ -134,14 +165,24 @@ body {background-color: rgb(157, 152, 150);}
     left: 0px;
   }
 
+  /* Multi-player speaker labels */
+  .msg.gm-player::before {
+    left: 15px;
+  }
+
+  .msg.player-gm::before {
+    right: 15px;
+  }
+
 .game-round {
-  padding: 20px 0 20px 0;
+  padding: 20px; /* Consistent padding on all sides */
   background-color: #f0f8ff; /* light background for content */
   position: relative; /* Important to position the badge */
   border-radius: 10px;
-  margin: 10px 0 10px 0;
-  max-width: 800px;
+  margin: 10px 0; /* Use 0 for horizontal margin with width 100% */
+  width: 100%; /* Make all rounds take full width of parent */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 100px; /* Minimum height to prevent collapsing */
 }
 
 /* Badge in top-right corner */

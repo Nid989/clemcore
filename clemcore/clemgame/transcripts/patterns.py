@@ -37,7 +37,8 @@ HTML_FOOTER = '''
 </html>
 '''
 
-TEX_HEADER = '''
+# Template for 2-player games (backward compatibility)
+TEX_HEADER_2PLAYER = '''
 \\documentclass{article}
 \\usepackage{colortbl}
 \\usepackage{makecell}
@@ -55,6 +56,28 @@ TEX_HEADER = '''
 \\begin{supertabular}{c@{$\;$}|p{.15\\linewidth}@{}p{.15\\linewidth}p{.15\\linewidth}p{.15\\linewidth}p{.15\\linewidth}p{.15\linewidth}}
 
     \\# & $\\;$A & \\multicolumn{4}{c}{Game Master} & $\\;\\:$B\\\\
+    \\hline 
+'''
+
+# Template for multi-player games
+TEX_HEADER_MULTIPLAYER = '''
+\\documentclass{article}
+\\usepackage{colortbl}
+\\usepackage{makecell}
+\\usepackage{multirow}
+\\usepackage{supertabular}
+
+\\begin{document}
+
+\\newcounter{utterance}
+
+\\twocolumn
+
+{ \\footnotesize  \\setcounter{utterance}{1}
+\\setlength{\\tabcolsep}{0pt}
+\\begin{supertabular}{c@{$\;$}|p{.15\\linewidth}@{}p{.15\\linewidth}p{.15\\linewidth}p{.15\\linewidth}p{.15\\linewidth}p{.15\linewidth}}
+
+    \\# & $\\;$GM & \\multicolumn{4}{c}{Players} & $\\;\\:$\\\\
     \\hline 
 '''
 

@@ -269,6 +269,14 @@ class DialogueGameMaster(GameMaster):
     @final
     def get_context_for(self, player) -> Dict:
         assert player is not None, "Cannot get player context for 'None'"
+        
+        # Allow no context if player has initial_prompt set and this is the first call
+        if (player.initial_prompt is not None and 
+            player.is_initial_call and 
+            player.name not in self.context_for_player):
+            # Return a minimal context that will be merged with the initial prompt by the backend
+            return {"role": "user", "content": ""}
+        
         assert player.name in self.context_for_player, f"No context set for {player.name}"
         context = self.context_for_player[player.name]
         assert "role" in context, f"Player context must have a 'role' entry"

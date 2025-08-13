@@ -119,6 +119,14 @@ class Player(abc.ABC):
         return self._model
 
     @property
+    def is_initial_call(self):
+        """Check if this is the first call to the player.
+        Returns:
+            True if this is the first call, False otherwise.
+        """
+        return self._is_initial_call
+
+    @property
     def messages(self):
         if self._sliding_memory is not None:
             # Return messages from sliding window memory
@@ -176,7 +184,6 @@ class Player(abc.ABC):
             memorized_initial_prompt = deepcopy(self._initial_prompt)
             
             if self._sliding_memory is not None:
-                print("Setting initial prompt in sliding window memory")
                 # For sliding window memory, set the initial prompt in the memory manager
                 self._sliding_memory.set_initial_prompt(memorized_initial_prompt)
             else:
@@ -206,7 +213,6 @@ class Player(abc.ABC):
 
         if memorize:
             if self._sliding_memory is not None:
-                print("Adding message pair to sliding window memory")
                 # Use sliding window memory
                 response_message = dict(role="assistant", content=response_text)
                 self._sliding_memory.add_message_pair(memorized_context, response_message)
@@ -229,7 +235,6 @@ class Player(abc.ABC):
         else:
             # Use sliding window memory if enabled, otherwise use traditional approach
             if self._sliding_memory is not None:
-                print("Getting prompt messages from sliding window memory")
                 prompt_messages = self._sliding_memory.get_prompt_messages(current_context=context)
             else:
                 prompt_messages = self._messages + [context]

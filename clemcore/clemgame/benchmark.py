@@ -248,18 +248,17 @@ class GameBenchmark(GameResourceLocator):
             model_0 = f"{model_0.get_name()}-t{model_0.get_temperature()}"
             # still we store to model--model dir (virtual self-play)
             dialogue_pair_desc = f"{model_0}--{model_0}"
-        else:  # 2-players
-            if len(player_models) > 2:
-                message = f"Too many player for two-player game '{self.game_name}': '{len(player_models)}'"
-                stdout_logger.error(message)
-                raise ValueError(message)
+        else:  # Multi-player games (2 or more players)
             if len(player_models) == 1:
-                player_models.append(player_models[0])  # model expansion
-            model_0 = player_models[0]
-            model_0 = f"{model_0.get_name()}-t{model_0.get_temperature()}"
-            model_1 = player_models[1]
-            model_1 = f"{model_1.get_name()}-t{model_1.get_temperature()}"
-            dialogue_pair_desc = f"{model_0}--{model_1}"
+                player_models.append(player_models[0])  # model expansion for 2-player games
+            
+            # Create descriptor for any number of players
+            model_descriptors = []
+            for model in player_models:
+                model_desc = f"{model.get_name()}-t{model.get_temperature()}"
+                model_descriptors.append(model_desc)
+            
+            dialogue_pair_desc = "--".join(model_descriptors)
         return dialogue_pair_desc
 
     def create_game_master(self, experiment: Dict, player_models: List[backends.Model]) -> GameMaster:

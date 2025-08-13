@@ -18,23 +18,20 @@ stdout_logger = logging.getLogger("clemcore.run")
 
 def _get_class_name(event):
     """Get a string representation of the direction of a message.
-    Example: A message from the game's GM to Player 1 is represented by the string 'gm-a'.
+    For multi-player games: All GM messages go left, all player messages go right.
     Args:
         event: The interaction record event to get the message direction for.
     Returns:
         The string representation of the direction of the message in the passed interaction event.
     """
-    if event['from'] == 'GM' and event['to'].startswith('Player 1'):
-        return "gm-a"
-    if event['from'] == 'GM' and event['to'].startswith('Player 2'):
-        return "gm-b"
-    if event['from'].startswith('Player 1') and event['to'] == 'GM':
-        return "a-gm"
-    if event['from'].startswith('Player 2') and event['to'] == 'GM':
-        return "b-gm"
     if event['from'] == 'GM' and event['to'] == 'GM':
-        return "gm-gm"
-    raise RuntimeError(f"Cannot handle event entry {event}")
+        return "gm-gm"  # GM to GM (meta/system message)
+    elif event['from'] == 'GM':
+        return "gm-player"  # GM to Player
+    elif event['from'].startswith('Player'):
+        return "player-gm"  # Player to GM
+    else:
+        raise RuntimeError(f"Cannot handle event entry {event}")
 
 
 def build_transcripts(top_dir: str, filter_games: List = None):
@@ -96,12 +93,28 @@ def build_transcript(interactions: Dict):
             else:
                 from_player = event['from']
                 to_player = event['to']
-                if "game_role" in players[from_player] and "game_role" in players[to_player]:
-                    from_game_role = players[from_player]["game_role"]
-                    to_game_role = players[to_player]["game_role"]
-                    speaker_attr = f"{from_player} ({from_game_role}) to {to_player} ({to_game_role})"
-                else: # old mode (before 2.4)
-                    speaker_attr = f"{event['from'].replace('GM', 'Game Master')} to {event['to'].replace('GM', 'Game Master')}"
+                if from_player == 'GM':
+                    # GM to any player
+                    if "game_role" in players[to_player]:
+                        to_game_role = players[to_player]["game_role"]
+                        speaker_attr = f"Game Master to {to_player} ({to_game_role})"
+                    else:
+                        speaker_attr = f"Game Master to {to_player}"
+                elif to_player == 'GM':
+                    # Any player to GM
+                    if "game_role" in players[from_player]:
+                        from_game_role = players[from_player]["game_role"]
+                        speaker_attr = f"{from_player} ({from_game_role}) to Game Master"
+                    else:
+                        speaker_attr = f"{from_player} to Game Master"
+                else:
+                    # Player to player (shouldn't happen in current system)
+                    if "game_role" in players[from_player] and "game_role" in players[to_player]:
+                        from_game_role = players[from_player]["game_role"]
+                        to_game_role = players[to_player]["game_role"]
+                        speaker_attr = f"{from_player} ({from_game_role}) to {to_player} ({to_game_role})"
+                    else:
+                        speaker_attr = f"{from_player} to {to_player}"
             # in case the content is a json BUT given as a string!
             # we still want to check for image entry
             if isinstance(msg_content, str):
@@ -143,7 +156,16 @@ def build_tex(interactions: Dict):
     Args:
         interactions: An episode interaction record dict.
     """
-    tex = patterns.TEX_HEADER
+    # Determine if this is a multi-player game by counting players
+    players = interactions.get("players", {})
+    player_count = len([name for name in players.keys() if name.startswith("Player")])
+    
+    # Use appropriate template based on player count
+    if player_count <= 2:
+        tex = patterns.TEX_HEADER_2PLAYER
+    else:
+        tex = patterns.TEX_HEADER_MULTIPLAYER
+    
     # Collect all events over all turns (ignore turn boundaries here)
     events = [event for turn in interactions['turns'] for event in turn]
     for event in events:
